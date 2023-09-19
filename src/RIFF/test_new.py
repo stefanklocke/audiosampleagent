@@ -3,6 +3,8 @@ import io
 import re
 import operator
 import json
+from pathlib import Path
+import os
 
 import pandas as pd
 
@@ -66,7 +68,10 @@ class WAVFile:
 
                 if(chunkID == b'\x00ID3' or chunkID == b'ID3 '):
                     chunk = fh.read(chunkSize)
+                    print(chunk)
                     chunk_decoded = chunk.decode("utf-8", errors = "ignore")
+
+                    print(chunk_decoded)
 
                     chunk_decoded_clean = chunk_decoded.replace("\x00", "")
 
@@ -224,5 +229,5 @@ class WAVFile:
 # wavFile = WAVFile('Ambience Berlina 6.wav')
 
 # wavFile = WAVFile('aah_chord_loop_contact_120_Cmin.wav')
-# wavFile = WAVFile('aah_chord_loop_elektron_120_Gmin.wav')
-# wavFile.read()
+wavFile = WAVFile(Path(os.getcwd(), "data", "Instr_34_Smp_00.wav"))
+wavFile.read()
