@@ -6,6 +6,9 @@ import json
 
 import pandas as pd
 
+from pathlib import Path
+import os
+
 pd.set_option('display.max_columns', None)
 
 class WAVFile:
@@ -219,10 +222,11 @@ class WAVFile:
 
         return(df)
 
+print(os.getcwd())
 
 # wavFile = WAVFile('Modular[122] F#m Miko 1.wav')
-# wavFile = WAVFile('Ambience Berlina 6.wav')
+wavFile = WAVFile(Path('./data/Ambience Berlina 6.wav'))
 
 # wavFile = WAVFile('aah_chord_loop_contact_120_Cmin.wav')
 # wavFile = WAVFile('aah_chord_loop_elektron_120_Gmin.wav')
-# wavFile.read()
+wavFile.read()
