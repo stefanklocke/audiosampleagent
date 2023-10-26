@@ -7,7 +7,10 @@ Audio Sample Agent
 - Activate the virtual environment by using `source .venv/bin/activate`
 - Note that the folder `.venv*/` should be listed in the `.gitignore` file
 
-### Requirements
+### Python Libraries
+- Run `pip install -r requirements.txt` to install all libraries configured in `./requirements.txt`
+
+### Additional Requirements
 Install PortAudio:
 - sudo apt-get install libasound-dev
 - sudo apt-get install libportaudio2
