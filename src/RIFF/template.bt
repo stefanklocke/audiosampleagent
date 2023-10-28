@@ -159,23 +159,29 @@ typedef struct {
         uchar padding;
 } LISTSUBCHUNK <style=sSection4>;
 
-// NEW ID3 chunk
-typedef struct {
-    ID          chunkID;
-    long        chunkSize;
-    char        listData[chunkSize];
-} ID3 <style=sSection3>;
-
 typedef struct {
     ID        chunkID;
     long      chunkSize;
     local quad pos = FTell();
     ID        chunkType;
     local uint size;
+    local quad ftell;
+    local quad info;
 
     // Read the subchunks
+    // pos = 2118524
+    // FTell() = 2118528
+    // difference between FTell() - pos = 4 (chunkType)
+    
+    ftell = FTell();
     while( FTell() - pos < chunkSize ) {
+        // FTell() + 4 = 2118532 (first byte after chunkID)
+        // (+4 because after FTell() = 2118528 comes chunkID = IART until 2118531
+        // size because after chunkID comes chunkSize again
+        // size = 14 is the size of the second subchunk
         size = ReadUInt( FTell()+4 );
+        ftell = size;
+        info = pos;
         if  (FTell() - pos + size<= chunkSize)
             LISTSUBCHUNK subchunk;
         else
@@ -197,6 +203,39 @@ typedef struct {
     if( (chunkSize & 1) && (FTell() < FileSize()) )
         uchar padding;
 } UNKNOWNCHUNK;
+
+// NEW ID3 chunk
+typedef struct {
+    ID        chunkID;
+    long      chunkSize;
+    // pos is the position after chunkSize (starting position of the chunk)
+    local quad pos = FTell();
+    ID        chunkType;
+    local uint size;
+    long someSpace;
+    short someShortSpace;
+    ID        geobChunkType;
+    long        subchunkSize;
+    local quad info = FTell();
+
+    // Read the subchunks
+    // chunkSize = 1652 (all bytes after chunkID and chunkSize): 1660 - 8 = 1652
+    // FTell() = 2116874
+    // pos = 2116864
+    // FTell() - pos = 10
+    info = FTell() - pos;
+    while( FTell() - pos < chunkSize ) {
+        size = ReadUInt( FTell()+4 );
+        if  (FTell() - pos + size<= chunkSize)
+            LISTSUBCHUNK subchunk;
+        else
+            uchar unknown[ chunkSize - (FTell() - pos) ];
+    }
+
+    // Padding so the next chunk starts on an even byte
+    if( (chunkSize & 1) && (FTell() < FileSize()) )
+        uchar padding;
+} ID3 <style=sSection3>;
 
 //---------------------------------------------
 
@@ -239,7 +278,7 @@ while( !FEof() )
             LISTCHUNK   list;
             break;
         case "ID3 ":
-            ID3   list;
+            ID3   id3;
             break;
         default:
             // Unknown chunk
