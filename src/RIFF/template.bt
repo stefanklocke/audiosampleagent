@@ -172,15 +172,13 @@ typedef struct {
     // pos = 2118524
     // FTell() = 2118528
     // difference between FTell() - pos = 4 (chunkType)
-    
-    ftell = FTell();
     while( FTell() - pos < chunkSize ) {
         // FTell() + 4 = 2118532 (first byte after chunkID)
         // (+4 because after FTell() = 2118528 comes chunkID = IART until 2118531
         // size because after chunkID comes chunkSize again
         // size = 14 is the size of the second subchunk
         size = ReadUInt( FTell()+4 );
-        ftell = size;
+        ftell = FTell();
         info = pos;
         if  (FTell() - pos + size<= chunkSize)
             LISTSUBCHUNK subchunk;
@@ -204,18 +202,68 @@ typedef struct {
         uchar padding;
 } UNKNOWNCHUNK;
 
-// NEW ID3 chunk
 typedef struct {
-    ID        chunkID;
+    ubyte raw[4];
+
+    local uint32 computed = raw[0];
+    computed <<= 7;
+    computed |= raw[1];
+    computed <<= 7;
+    computed |= raw[2];
+    computed <<= 7;
+    computed |= raw[3];
+
+    if (raw[0] >= 0x80  ||  raw[1] >= 0x80  ||
+        raw[2] >= 0x80  ||  raw[3] >= 0x80)
+    {
+        Printf("MP3: warning: invalid ID3v2 synchsafe integer\n");
+    }
+} synchsafe_integer <read=read_synchsafe_integer>;
+
+string read_synchsafe_integer( synchsafe_integer &v )
+{
+    string s;
+    SPrintf( s, "%u", v.computed );
+    return s;
+}
+
+struct ID3v2_HEADER
+{
+    SetBackColor(0x91C4FF);
+
+    char head[3]; // always must be "ID3" ($49 44 33)
+
+    DisplayFormatDecimal();
+
+    ubyte ver_major; // this byte will never be $FF
+    ubyte ver_revision; // this byte will never be $FF
+
+    struct FLAGS {
+        ubyte UNSYNCHRONISATION_USED  : 1;
+        ubyte EXTENDED_HEADER_PRESENT : 1;
+        ubyte EXPERIMENTAL_TAG        : 1;
+        ubyte                         : 5;
+    } flags;
+
+    DisplayFormatHex();
+
+    synchsafe_integer size; // Is the size of the complete tag after unsynchronisation,
+                   // including padding, excluding the header but not excluding
+                   // the extended header (total tag size - 10). Most
+                   // significant bit (bit 7) of each byte is set to zero
+};
+
+// NEW ID3 chunk
+//// DOCS
+// GEOB docs: https://mutagen-specs.readthedocs.io/en/latest/id3/id3v2.3.0.html
+//ID3v2.4 docs: 
+typedef struct {
+    ID   chunkID;
     long      chunkSize;
-    // pos is the position after chunkSize (starting position of the chunk)
+    ID3v2_HEADER hdr;
+    // pos is the first position after the ID3 header
     local quad pos = FTell();
-    ID        chunkType;
     local uint size;
-    long someSpace;
-    short someShortSpace;
-    ID        geobChunkType;
-    long        subchunkSize;
     local quad info = FTell();
 
     // Read the subchunks
@@ -223,19 +271,30 @@ typedef struct {
     // FTell() = 2116874
     // pos = 2116864
     // FTell() - pos = 10
-    info = FTell() - pos;
-    while( FTell() - pos < chunkSize ) {
+    info = hdr.size.computed;
+    
+    
+    // Ab einschl G von GEOB sind noch hdr.size.computed = 1642 bis VOR LIST
+    //Printf("Hello");
+    while(FTell() - pos < hdr.size.computed) {
+        // Liest den uint-wert aus dem aktuellen+4 byte
         size = ReadUInt( FTell()+4 );
-        if  (FTell() - pos + size<= chunkSize)
+        if(FTell() - pos + size <= hdr.size.computed)
             LISTSUBCHUNK subchunk;
         else
-            uchar unknown[ chunkSize - (FTell() - pos) ];
+            uchar unknown[ hdr.size.computed - (FTell() - pos) ];
     }
 
     // Padding so the next chunk starts on an even byte
     if( (chunkSize & 1) && (FTell() < FileSize()) )
         uchar padding;
 } ID3 <style=sSection3>;
+
+typedef struct {
+    ID      chunkID;
+    long    chunkSize;
+    uchar   unknown[chunkSize];
+} GEOB <style=sSection3>;
 
 //---------------------------------------------
 
@@ -279,6 +338,9 @@ while( !FEof() )
             break;
         case "ID3 ":
             ID3   id3;
+            break;
+        case "GEOB":
+            GEOB    geob;
             break;
         default:
             // Unknown chunk

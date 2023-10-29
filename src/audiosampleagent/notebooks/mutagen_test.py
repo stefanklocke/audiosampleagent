@@ -1,11 +1,17 @@
-"""Notes:
+"""
+Notes:
+- mutage.File().tags contains object of class 'mutagen.wave._WaveID3'
+- _WaveID3
 
+
+Some links:
 https://mutagen.readthedocs.io/en/latest/api/id3_frames.html#mutagen.id3.GEOB
 """
 
 import mutagen
 from pathlib import Path
 import pprint
+from collections import namedtuple
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -26,35 +32,53 @@ a = mutagen.File(Path(pathData, "aah_chord_loop_contact_120_Cmin.wav"))
 # # a.tags.size -- number of bytes of GEOB (or ID3?) part
 # # a.tags.keys() -- returns dict_keys() object (standard object from dict), iterable
 
+
+
+
 def run_files(files, folder = Path("./data")):
     def get_tags(file):
+        # Empty list will be returned as default (if file.tags is None)
+        ans = []
         tags = file.tags
 
         if(tags):
-            return(tags)
+            # tags.items() returns a tuple with ("GEOB:...", GEOB(...))
+            # The second element contains the actual frame, so this will be returned
+            # ans = [tup[1] for tup in tags.items()]
+            ans = [{"desc": tup[1].desc, "obj": tup[1]} for tup in tags.items()]
+            return(ans)
         else:
-            return([])
+            return(ans)
+
     
     ans = []
 
     for file in files:
         a = mutagen.File(Path(folder, file))
 
-        pp.pprint(a.tags.keys() if a.tags else None)
-
+        # pp.pprint(a.tags.keys() if a.tags else None)
         current = {
             "filename": file,
-            "tags": [key for key in get_tags(a)]
+            "tags": get_tags(a)
         }
         ans.append(current)
     
     return ans
 
 audiofiles = run_files(files, pathData)
-pp.pprint(audiofiles[0]["tags"])
+# audiofiles[0]["tags"][0][1] -- frame (in this case: GEOB frame)
+# audiofiles[0]["tags"][0][1].FrameID -- returns frame ID (in this case: GEOB)
+# audiofiles[0]["tags"][0][1].pprint() -- would print data, if data wasnt proprietary ...
+# audiofiles[0]["tags"][0][1].data -- frame data
+# pp.pprint(audiofiles)
 
 
-
+for file in audiofiles:
+    print(file["filename"])
+    if(file["tags"]):
+        for tag in file["tags"]:
+            if(tag["desc"] == "com.native-instruments.nisound.soundinfo"):
+                print(tag["obj"].data)
 
 # # GEOBs
 # for i in a.tags.keys():
