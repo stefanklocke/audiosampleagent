@@ -1,3 +1,4 @@
 matplotlib==3.8.0
 pandas==2.1.0
 pytaglib==2.0.0
+mutagen==1.47.0
