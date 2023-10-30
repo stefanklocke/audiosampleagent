@@ -70,15 +70,15 @@ audiofiles = run_files(files, pathData)
 # audiofiles[0]["tags"][0][1].FrameID -- returns frame ID (in this case: GEOB)
 # audiofiles[0]["tags"][0][1].pprint() -- would print data, if data wasnt proprietary ...
 # audiofiles[0]["tags"][0][1].data -- frame data
-# pp.pprint(audiofiles)
+pp.pprint(audiofiles)
 
 
-for file in audiofiles:
-    print(file["filename"])
-    if(file["tags"]):
-        for tag in file["tags"]:
-            if(tag["desc"] == "com.native-instruments.nisound.soundinfo"):
-                print(tag["obj"].data)
+# for file in audiofiles:
+#     print(file["filename"])
+#     if(file["tags"]):
+#         for tag in file["tags"]:
+#             if(tag["desc"] == "com.native-instruments.nisound.soundinfo"):
+#                 print(tag["obj"].data)
 
 # # GEOBs
 # for i in a.tags.keys():

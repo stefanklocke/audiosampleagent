@@ -290,11 +290,254 @@ typedef struct {
         uchar padding;
 } ID3 <style=sSection3>;
 
+
+// NEW
+// NEW
+// NEW
+enum <ubyte> ID3_GENRES
+{
+    Blues, Classic_Rock, Country, Dance, Disco, Funk, Grunge, Hip_Hop, // 7
+    Jazz, Metal, New_Age, Oldies, Other, Pop, R_and_B, Rap, // 15
+    Reggae, Rock, Techno, Industrial, Alternative, Ska, Death_Metal, Pranks, // 23
+    Soundtrack, Euro_Techno, Ambient, Trip_Hop, Vocal, Jazz_Funk, Fusion, Trance, // 31
+    Classical, Instrumental, Acid, House, Game, Sound_Clip, Gospel, Noise, // 39
+    AlternRock, Bass, Soul, Punk, Space, Meditative, Instrumental_Pop, Instrumental_Rock, // 47
+    Ethnic, Gothic, Darkwave, Techno_Industrial, Electronic, Pop_Folk, Eurodance, Dream, // 55
+    Southern_Rock, Comedy, Cult, Gangsta, Top_40, Christian_Rap, Pop_Funk, Jungle, // 63
+    Native_American, Cabaret, New_Wave, Psychadelic, Rave, Showtunes, Trailer, Lo_Fi, // 71
+    Tribal, Acid_Punk, Acid_Jazz, Polka, Retro, Musical, Rock_n_Roll, Hard_Rock, // 79
+    Folk, Folk_Rock, National_Folk, Swing, Fast_Fusion, Bebob, Latin, Revival, // 87
+    Celtic, Bluegrass, Avantgarde, Gothic_Rock,
+    Progressive_Rock, Psychedelic_Rock, Symphonic_Rock, Slow_Rock, // 95
+    Big_Band, Chorus, Easy_Listening, Acoustic, Humour, Speech, Chanson, Opera, // 103
+    Chamber_Music, Sonata, Symphony, Booty_Bass, Primus, Porn_Groove, Satire, Slow_Jam, // 111
+    Club, Tango, Samba, Folklore, Ballad, Power_Ballad, Rhythmic_Soul, Freestyle, // 119
+    Duet, Punk_Rock, Drum_Solo, A_capella, Euro_House, Dance_Hall, Goa, Drum_and_Bass, // 127
+    Club_House, Hardcore, Terror, Indie, BritPop, Negerpunk, Polsk_Punk, Beat, // 135
+    Christian, Heavy_Metal, Black_Metal, Crossover,
+    Contemporary, Christian_Rock, Merengue, Salsa, Thrash_Metal, Anime, JPop, Synthpop // 147
+};
+
+
+struct ID3v1_TAG
+{
+    DisplayFormatDecimal();
+
+    SetBackColor(0x33BC55);
+    char id[3]; // always must be "TAG"
+
+    SetBackColor(0x48E048);
+    char title[30];
+
+    SetBackColor(0x5DE45D);
+    char artist[30];
+
+    SetBackColor(0x72E872);
+    char album[30];
+
+    SetBackColor(0x87EC87);
+    char year[4];
+
+    if ( ReadByte(FTell()+28) == 0  &&  ReadByte(FTell()+29) != 0 )
+    {
+        // We have ID3v1.1 tag
+
+        SetBackColor(0x9CF09C);
+        char comment[28];
+
+        SetBackColor(0xB1F4B1);
+        byte zero;
+
+        SetBackColor(0xC6F8C6);
+        ubyte track;
+    }
+    else
+    {
+        // We have ID3v1.0 tag
+
+        SetBackColor(0x9CF09C);
+        char comment[30];
+    }
+
+    SetBackColor(0xDBFCDB);
+    ID3_GENRES genre;
+};
+
+
+struct ID3v2_FRAME
+{
+    char id[4]; // four alpha chars
+
+    DisplayFormatDecimal();
+
+    uint32 size; // frame size without frame header
+
+    struct FRAME_FLAGS {
+        uint16 TAG_ALTER_PRESERV  : 1;
+        uint16 FILE_ALTER_PRESERV : 1;
+        uint16 READ_ONLY_FRAME    : 1;
+        uint16                    : 5;
+        uint16 COMPRESSED_FRAME   : 1;
+        uint16 ENCRYPTED_FRAME    : 1;
+        uint16 GROUP_MEMBER_FRAME : 1;
+        uint16                    : 5;
+    } flags;
+
+    if (id[0] == 'T')
+    {
+        // frame contains text related data
+        if ( ReadByte(FTell()) == 0  &&  size > 1)
+        {
+            byte id_asciiz_str;
+            char frame_data [size - 1];
+        }
+        else
+            char frame_data [size];
+    }
+    else
+    {
+        DisplayFormatHex();
+        ubyte frame_data [size];
+    }
+};
+
+struct ID3v2_EXTENDED_HEADER
+{
+    SetBackColor(0xA1D4FF);
+
+    DisplayFormatDecimal();
+
+    uint32 size; // extended header size, excluding this 'size' field
+
+    uint16 FLAG_CRC_PRESENT :  1;   // extended header flags
+    uint16                  : 15;   //
+
+    uint32 padding_sz;
+
+    if (FLAG_CRC_PRESENT)
+    {
+        DisplayFormatHex();
+        uint32 crc;
+    }
+};
+
+struct ID3v2_4_FRAME
+{
+    char id[4]; // four alpha chars
+
+    DisplayFormatDecimal();
+
+    synchsafe_integer size; // frame size without frame header
+
+    FRAME_FLAGS flags;
+    
+    if(id == "GEOB")
+    {
+        // filename starts 3 bytes after flags (FTell() + 2)
+        local quad start_filename = FTell() + 2;
+        Printf(id);
+    }
+
+    if (id[0] == 'T' || id == "GEOB")
+    {
+        // frame contains text related data
+        enum <ubyte> {
+            ISO_8859_1,
+            UTF_16_with_BOM,
+            UTF_16BE_without_BOM,
+            UTF_8
+        } encoding;
+        
+        if (id == "GEOBa")
+        {
+            ubyte   mime;
+            
+            // Filename
+            // Run file until
+                // while ReadByte(FTell()) != 0 (because filename has stopping byte (00))
+                // while FTell() < size.computed - 3
+            do
+            {
+                // description starts ... after ...
+            }
+            while(ReadByte(FTell()) != 0);
+            char frame_data [size.computed - 2];
+        }
+        else
+        {
+            char frame_data [size.computed - 1];
+        }
+    }
+    else
+    {
+        DisplayFormatHex();
+        ubyte frame_data [size.computed];
+    }
+};
+
+struct IDTHREETAG
+{
+    // Starting position of ID3 chunk is 8 bytes before ID3 header (4 "ID3 " chunkID, 4 chunkSize)
+    local uint32 startpos_ID3Chunk = FTell() - 8;
+    
+    ID3v2_HEADER hdr;
+    
+    local quad info;
+
+    // calculating real size of the ID3v2 tag
+    local uint32 tag_sz = hdr.size.computed;
+    
+    //
+    // An ID3v2 tag header can be detected with the following pattern:
+    // $49 44 33 yy yy xx zz zz zz zz
+    // Where yy is less than $FF, xx is the 'flags' byte and zz is less than $80.
+    //
+    if (hdr.ver_major == 0xFF  ||  hdr.ver_revision == 0xFF)
+    {
+        Printf("MP3: warning: invalid ID3v2 tag header\n");
+    }
+    else
+    {
+        if ( !(hdr.ver_major == 3 || hdr.ver_major == 4)  ||  hdr.flags.UNSYNCHRONISATION_USED  ||  hdr.flags.EXPERIMENTAL_TAG)
+        {
+            Printf("MP3: warning: skipping unsupported ID3v2.%d tag\n", hdr.ver_major);
+            SetBackColor(0xA9DCFF);
+            DisplayFormatHex();
+            ubyte id3v2_data[tag_sz];
+        }
+        else
+        {
+            if ( hdr.flags.EXTENDED_HEADER_PRESENT )
+                ID3v2_EXTENDED_HEADER ext_hdr;
+
+            // Now reading ID3v2 frames
+            // A tag must contain at least one frame. A frame must be
+            // at least 1 byte big, excluding the header.
+            //
+            local uint32 frame_color = 0xC9FCFF;
+            do
+            {
+                SetBackColor(frame_color);
+                if (hdr.ver_major == 3)
+                    ID3v2_FRAME tf;
+                else
+                    ID3v2_4_FRAME tf;
+                frame_color -= 0x020200;
+            }
+            // 4 bytes "ID3 ", 4 bytes chunksize, sizeof(hdr), tag_size
+            while ( FTell() < startpos_ID3Chunk + 4 + 4 + sizeof(hdr) + tag_sz && ReadByte(FTell()) != 0 );
+            info = startpos_ID3Chunk + 4 + 4 + sizeof(hdr) + tag_sz;
+            SetBackColor(0x99CCFF);
+            ubyte id3v2_padding [ startpos_ID3Chunk + 8 + tag_sz + sizeof(hdr) - FTell() ];
+        }
+    }
+};
+
 typedef struct {
     ID      chunkID;
     long    chunkSize;
-    uchar   unknown[chunkSize];
-} GEOB <style=sSection3>;
+    IDTHREETAG  id3tag;
+} ID4 <style=sSection3>;
 
 //---------------------------------------------
 
@@ -337,10 +580,7 @@ while( !FEof() )
             LISTCHUNK   list;
             break;
         case "ID3 ":
-            ID3   id3;
-            break;
-        case "GEOB":
-            GEOB    geob;
+            ID4   id3;
             break;
         default:
             // Unknown chunk
